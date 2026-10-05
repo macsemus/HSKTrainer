@@ -1,4 +1,4 @@
-package by.max.Controller;
+package by.max.controller;
 
 import by.max.dto.ChineseZiDto;
 import by.max.model.ChineseZi;

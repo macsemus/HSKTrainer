@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="DataSourcePerFileMappings">
+    <file url="file://$PROJECT_DIR$/src/main/resources/db/migration/V4__add_users_and_link_tests.sql" value="4c8a7cf3-da49-4fcf-8eb3-76e74d191588" />
+  </component>
+</project>
