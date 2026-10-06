@@ -70,6 +70,24 @@
             margin-bottom: 20px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
+        .nav-links {
+            display: flex;
+            gap: 10px;
+        }
+        .nav-btn {
+            background: #ecf0f1;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            color: #2c3e50;
+            transition: background 0.2s;
+        }
+        .nav-btn.active, .nav-btn:hover {
+            background: #3498db;
+            color: white;
+        }
         .logout-btn {
             background: #e74c3c;
             color: white;
@@ -113,12 +131,14 @@
             background: #2980b9;
             transform: translateY(-2px);
         }
-        #test-screen {
+        #test-screen, #profile-screen {
             display: none;
             background: white;
             padding: 30px;
             border-radius: 12px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        #test-screen {
             text-align: center;
         }
         .chinese-char {
@@ -179,6 +199,70 @@
         .back-btn {
             background: #95a5a6;
         }
+
+        /* Стили личного кабинета */
+        .profile-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        .table-history {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        .table-history th, .table-history td {
+            border: 1px solid #dfe6e9;
+            padding: 10px;
+            text-align: left;
+        }
+        .table-history th {
+            background-color: #f1f2f6;
+        }
+        .clickable-zi {
+            display: inline-block;
+            font-size: 1.8rem;
+            background: #e8f4fd;
+            color: #2980b9;
+            padding: 5px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 4px;
+            transition: background 0.2s, transform 0.1s;
+        }
+        .clickable-zi:hover {
+            background: #d4e6fc;
+            transform: scale(1.05);
+        }
+
+        /* Модальное окно иероглифа */
+        #zi-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            position: relative;
+        }
+        .close-modal {
+            position: absolute;
+            top: 10px; right: 15px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #7f8c8d;
+        }
     </style>
 </head>
 <body>
@@ -199,12 +283,49 @@
     <div id="main-app" style="display: none;">
         <div class="user-bar">
             <span id="current-user-label"></span>
+            <div class="nav-links">
+                <button class="nav-btn active" id="btn-menu" onclick="switchTab('menu')">Тесты</button>
+                <button class="nav-btn" id="btn-profile" onclick="switchTab('profile')">Личный кабинет</button>
+            </div>
             <button class="logout-btn" onclick="logout()">Выйти</button>
         </div>
 
-        <!-- Главное меню -->
+        <!-- Главное меню (Список тестов) -->
         <div id="menu-screen">
             <div id="app"></div>
+        </div>
+
+        <!-- Экран личного кабинета -->
+        <div id="profile-screen">
+            <h2>Личный кабинет</h2>
+            <div class="profile-card">
+                <h3>Статистика</h3>
+                <p>Всего пройдено тестов: <strong id="stat-total-tests">0</strong></p>
+            </div>
+
+            <div class="profile-card">
+                <h3>История пройденных тестов</h3>
+                <table class="table-history">
+                    <thead>
+                    <tr>
+                        <th>Название блока</th>
+                        <th>Статус</th>
+                        <th>Результат (Дата)</th>
+                    </tr>
+                    </thead>
+                    <tbody id="history-table-body">
+                    <!-- Динамически заполняется -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="profile-card">
+                <h3>Самые частые ошибки</h3>
+                <p style="font-size: 0.9rem; color: #666;">Нажмите на иероглиф, чтобы посмотреть подробную информацию:</p>
+                <div id="mistakes-container">
+                    <!-- Динамически заполняется кликабельными иероглифами -->
+                </div>
+            </div>
         </div>
 
         <!-- Экран теста -->
@@ -229,6 +350,18 @@
     </div>
 </div>
 
+<!-- Модальное окно для иероглифа -->
+<div id="zi-modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeZiModal()">&times;</span>
+        <div class="chinese-char" id="modal-zi" style="font-size: 4rem; margin: 0;">字</div>
+        <p><strong>Пиньинь:</strong> <span id="modal-pinyin"></span></p>
+        <p><strong>Перевод:</strong> <span id="modal-translation"></span></p>
+        <p><strong>Описание:</strong> <span id="modal-desc"></span></p>
+        <p><strong>Пример:</strong> <span id="modal-example"></span></p>
+    </div>
+</div>
+
 <script>
     const hskStructure = [
         { level: 1, startId: 1, totalWords: 150, wordsPerBlock: 50 },
@@ -239,6 +372,7 @@
     const authScreen = document.getElementById('auth-screen');
     const mainApp = document.getElementById('main-app');
     const menuScreen = document.getElementById('menu-screen');
+    const profileScreen = document.getElementById('profile-screen');
     const testScreen = document.getElementById('test-screen');
     const appDiv = document.getElementById('app');
 
@@ -247,6 +381,7 @@
     let currentIndex = 0;
     let score = 0;
     let currentBlockNumber = 1;
+    let mistakeZiIds = []; // Массив для сбора ID ошибочных иероглифов в текущем тесте
 
     // Проверка авторизации при загрузке
     window.onload = function() {
@@ -310,7 +445,7 @@
     function showMainApp(username) {
         authScreen.style.display = 'none';
         mainApp.style.display = 'block';
-        document.getElementById('current-user-label').textContent = `👤 Пользователь: ${username}`;
+        document.getElementById('current-user-label').textContent = `👤 ${username}`;
         renderMenu();
     }
 
@@ -319,6 +454,25 @@
         localStorage.removeItem('username');
         mainApp.style.display = 'none';
         authScreen.style.display = 'block';
+    }
+
+    // Переключение между вкладками (Тесты / Профиль)
+    function switchTab(tab) {
+        document.getElementById('btn-menu').classList.remove('active');
+        document.getElementById('btn-profile').classList.remove('active');
+        menuScreen.style.display = 'none';
+        profileScreen.style.display = 'none';
+        testScreen.style.display = 'none';
+
+        if (tab === 'menu') {
+            document.getElementById('btn-menu').classList.add('active');
+            menuScreen.style.display = 'block';
+            renderMenu();
+        } else if (tab === 'profile') {
+            document.getElementById('btn-profile').classList.add('active');
+            profileScreen.style.display = 'block';
+            loadProfileData();
+        }
     }
 
     function renderMenu() {
@@ -356,6 +510,73 @@
         });
     }
 
+    // Загрузка реальных данных для личного кабинета с бэкенда
+    async function loadProfileData() {
+        const token = localStorage.getItem('jwt_token');
+        const headers = { 'Authorization': `Bearer ${token}` };
+
+        try {
+            // 1. Загружаем историю тестов
+            const historyRes = await fetch('http://localhost:8080/api/tests/history', { headers });
+            if (!historyRes.ok) throw new Error('Ошибка загрузки истории');
+            const tests = await historyRes.json();
+
+            document.getElementById('stat-total-tests').textContent = tests.length;
+
+            const historyBody = document.getElementById('history-table-body');
+            historyBody.innerHTML = '';
+
+            tests.forEach(test => {
+                const dateStr = new Date(test.createdAt).toLocaleDateString();
+                historyBody.innerHTML += `
+                    <tr>
+                        <td>Блок ${test.blockNumber} (HSK)</td>
+                        <td>${test.passed ? 'Сдан' : 'Не сдан'}</td>
+                        <td>${test.score} / ${test.totalQuestions} <small>(${dateStr})</small></td>
+                    </tr>`;
+            });
+
+            // 2. Загружаем частые ошибки
+            const mistakesRes = await fetch('http://localhost:8080/api/tests/mistakes', { headers });
+            if (!mistakesRes.ok) throw new Error('Ошибка загрузки ошибок');
+            const mistakes = await mistakesRes.json();
+
+            const mistakesContainer = document.getElementById('mistakes-container');
+            mistakesContainer.innerHTML = '';
+
+            if (mistakes.length === 0) {
+                mistakesContainer.innerHTML = '<p style="color: #888;">Пока нет ошибок. Отличный результат!</p>';
+                return;
+            }
+
+            mistakes.forEach(item => {
+                const span = document.createElement('span');
+                span.className = 'clickable-zi';
+                span.textContent = item.zi.zi; // Сам иероглиф
+                span.title = `Ошибок: ${item.errorCount}. Нажмите для деталей.`;
+                span.onclick = () => openZiModal(item.zi); // Открываем модалку с полной информацией об иероглифе
+                mistakesContainer.appendChild(span);
+            });
+
+        } catch (error) {
+            console.error('Ошибка загрузки данных личного кабинета:', error);
+        }
+    }
+
+    // Открытие модального окна иероглифа
+    function openZiModal(ziObj) {
+        document.getElementById('modal-zi').textContent = ziObj.zi;
+        document.getElementById('modal-pinyin').textContent = ziObj.pinyin || 'нет данных';
+        document.getElementById('modal-translation').textContent = ziObj.translation || 'нет данных';
+        document.getElementById('modal-desc').textContent = ziObj.description || 'нет описания';
+        document.getElementById('modal-example').textContent = ziObj.example || 'нет примера';
+        document.getElementById('zi-modal').style.display = 'flex';
+    }
+
+    function closeZiModal() {
+        document.getElementById('zi-modal').style.display = 'none';
+    }
+
     async function startTest(startId, endId, blockNum) {
         currentBlockNumber = blockNum;
         const token = localStorage.getItem('jwt_token');
@@ -374,8 +595,10 @@
 
             currentIndex = 0;
             score = 0;
+            mistakeZiIds = []; // Сбрасываем ошибки для нового теста
 
             menuScreen.style.display = 'none';
+            profileScreen.style.display = 'none';
             testScreen.style.display = 'block';
 
             loadQuestion();
@@ -426,6 +649,11 @@
             clickedButton.classList.add('correct');
         } else {
             clickedButton.classList.add('wrong');
+            // Запоминаем ID ошибочного иероглифа
+            if (!mistakeZiIds.includes(currentWord.id)) {
+                mistakeZiIds.push(currentWord.id);
+            }
+
             document.querySelectorAll('.option-btn').forEach(btn => {
                 if (btn.textContent === currentWord.translation) {
                     btn.classList.add('correct');
@@ -464,11 +692,19 @@
         const token = localStorage.getItem('jwt_token');
 
         try {
-            await fetch(`http://localhost:8080/api/tests?blockNumber=${currentBlockNumber}&score=${score}&questionsNumber=${currentBlockWords.length}`, {
+            // Отправляем данные на эндпоинт сохранения с учетом списка ошибок
+            await fetch('http://localhost:8080/api/tests/save', {
                 method: 'POST',
                 headers: {
+                    'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
-                }
+                },
+                body: JSON.stringify({
+                    blockNumber: currentBlockNumber,
+                    score: score,
+                    totalQuestions: currentBlockWords.length,
+                    mistakeZiIds: mistakeZiIds
+                })
             });
         } catch (e) {
             console.error('Не удалось сохранить результат на сервере', e);
@@ -477,8 +713,7 @@
 
     function returnToMenu() {
         testScreen.style.display = 'none';
-        menuScreen.style.display = 'block';
-        location.reload();
+        switchTab('menu');
     }
 </script>
 
