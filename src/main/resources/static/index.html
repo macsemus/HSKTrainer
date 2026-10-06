@@ -683,17 +683,19 @@
     }
 
     async function finishTest() {
+        // Сначала показываем базовый экран завершения
         testScreen.innerHTML = `
             <h2>Тест завершен!</h2>
             <p style="font-size: 1.5rem;">Правильных ответов: ${score} из ${currentBlockWords.length}</p>
+            <p id="save-status" style="color: #666;">Сохранение результата...</p>
             <button class="back-btn" onclick="returnToMenu()">В главное меню</button>
         `;
 
         const token = localStorage.getItem('jwt_token');
+        const statusP = document.getElementById('save-status');
 
         try {
-            // Отправляем данные на эндпоинт сохранения с учетом списка ошибок
-            await fetch('http://localhost:8080/api/tests/save', {
+            const response = await fetch('http://localhost:8080/api/tests/save', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -706,8 +708,19 @@
                     mistakeZiIds: mistakeZiIds
                 })
             });
+
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(`Сервер ответил с ошибкой: ${response.status} - ${errText}`);
+            }
+
+            statusP.textContent = '✅ Результат успешно сохранен!';
+            statusP.style.color = '#2ecc71';
+
         } catch (e) {
             console.error('Не удалось сохранить результат на сервере', e);
+            statusP.textContent = `❌ Ошибка сохранения: ${e.message}`;
+            statusP.style.color = '#e74c3c';
         }
     }
 

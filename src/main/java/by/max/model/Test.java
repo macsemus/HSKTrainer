@@ -12,6 +12,7 @@ public class Test {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
+    @com.fasterxml.jackson.annotation.JsonIgnore // Добавь эту аннотацию
     private User user;
 
     private Integer blockNumber;

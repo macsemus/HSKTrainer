@@ -12,11 +12,11 @@ public class UserMistake {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user.id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "ср_zi1.id",nullable = false)
+    @JoinColumn(name = "zi_id", nullable = false)
     private ChineseZi zi;
 
     @Column(nullable = false)
